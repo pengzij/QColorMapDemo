@@ -1,0 +1,12 @@
+INPUT(
+./release\HotPlot.o
+./release\qcustomplot.o
+./release\main.o
+./release\mainwindow.o
+./release\udpconnect.o
+./release\config.o
+./release\qrc_config.o
+./release\moc_HotPlot.o
+./release\moc_qcustomplot.o
+./release\moc_udpconnect.o
+);

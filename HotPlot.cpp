@@ -7,6 +7,29 @@ const int nx = 240;
 const int ny = 240;
 const int datax = 80;
 const int datay = 80;
+HotPlot::HotPlot(QWidget *parent, int contourCnt, std::shared_ptr<CirQueue<float>> sp)
+    : QWidget(parent),
+      m_contourCnt(contourCnt),
+      showDataQueSp(sp)
+{
+    //初始化界面
+    initWindow();
+    //读取64通道电极点位置并决定是否显示通道、通道名
+    readChannelAxisFile(":/channelAxis.csv");
+    drawElements();
+    showChannelCircle(true);
+    showChannelName(true);
+    //初始化要显示的通道数,默认显示所有的导联
+    m_usedChannels.resize(m_channelAxis.size());
+    for(int i = 0; i < m_usedChannels.size(); ++i){
+        m_usedChannels[i] = i;
+    }
+    //预计算权重
+    precompute();
+    test();
+}
+
+
 HotPlot::HotPlot(QWidget *parent, int contourCnt)
     : QWidget(parent),
       m_contourCnt(contourCnt)
@@ -230,17 +253,43 @@ void HotPlot::initWindow()
 void HotPlot::test()
 {
     m_timer.setInterval(100);
-    connect(&m_timer, &QTimer::timeout, this, &HotPlot::handleTimeout);
+    //connect(&m_timer, &QTimer::timeout, this, &HotPlot::handleTimeout);
+    connect(&m_timer, &QTimer::timeout, this, &HotPlot::handleWavelen);
     m_timer.start();
     qsrand(20);
+
+}
+
+void HotPlot::handleWavelen()
+{
+    qDebug() << "size = " << showDataQueSp->size();
+    int len = min((int)showDataQueSp->size(), (int)m_usedChannels.size());
+    if(len == 0) return;
+    qDebug() << "len = " << len << endl;
+    vector<double> tmp(len, 0);
+    for(int i = 0; i < len; i++)
+    {
+        tmp[i] = showDataQueSp->front();
+        showDataQueSp->pop();
+        qDebug() << tmp[i] << endl;
+    }
+    showDataQueSp->clear();
+    setData(tmp);
 }
 
 void HotPlot::handleTimeout()
 {
-    std::vector<double> tmp(64, 0);
-    for(int i = 0; i < 64; ++i){
-        tmp[i] = qrand() * 1.0 / 10000;
-    }   
+    std::vector<double> tmp(5, 0);
+    for(int i = 0; i < 5; ++i){
+            tmp[i] = qrand() * 1.0 / 10000;
+            qDebug() << tmp[i] << endl;
+            //tmp[i] = i * 100.0 / 10000;
+        }
+//    for(int i = 0; i < 64; ++i){
+//        tmp[i] = qrand() * 1.0 / 10000;
+//        qDebug() << tmp[i] << endl;
+//        //tmp[i] = i * 100.0 / 10000;
+//    }
     setData(tmp);
 }
 
@@ -266,7 +315,7 @@ void HotPlot::calMatrix(std::vector<double> &channels)
             m_colorMap->data()->cellToCoord(i * ratex, j * ratey, &x, &y);
             double a = 0;
             for(int k = 0; k < size; ++k){
-                a += m_channelWeight[i][j][m_usedChannels[k]] * channels[k];
+                a += m_channelWeight[i][j][m_usedChannels[k]] * abs(channels[k]) / 10;
             }
 
             m_matrix1[i][j] = a;
@@ -319,6 +368,8 @@ void HotPlot::precompute()
                 //(x, y) 为 (i, j) 在 colormap坐标系下的映射
                 auto& point = m_channelAxis[k];
                 double rr = (point.x() - x) * (point.x() - x) + (point.y() - y) * (point.y() - y);
+                //if(point.x() == )
+                //qDebug() << x << y << endl;
                 sum += 1 / rr;
                 m_channelWeight[i][j][k] = 1 / rr;
             }

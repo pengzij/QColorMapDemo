@@ -5,7 +5,9 @@
 #include <QTimer>
 #include <QHash>
 #include "qcustomplot.h"
+#include "CirQueue.h"
 #include <QDebug>
+#include <memory>
 
 class HotPlot : public QWidget
 {
@@ -13,6 +15,7 @@ class HotPlot : public QWidget
 
 public:
     HotPlot(QWidget *parent = nullptr, int contourCnt = 100);
+    HotPlot(QWidget *parent = nullptr, int contourCnt = 100, std::shared_ptr<CirQueue<float>> sp = nullptr);
     ~HotPlot();
     //设置要显示的通道
     void setEnabledChannels(QStringList& channels);
@@ -25,12 +28,16 @@ public:
     void showChannelName(bool flag);
     //是否显示通道圆
     void showChannelCircle(bool flag);
+
+    void handleTimeout();
+
+    void handleWavelen();
 private:
     void initWindow();
     void readChannelAxisFile(QString path);
     void drawElements();
     void test();
-    void handleTimeout();
+
     //根据每个点的位置计算矩阵值
     void calMatrix(std::vector<double> &channels);//DoubleLinear方式
     double doubleLinear(int m, int n, int X, int Y, double V1, double V2, double V3, double V4);
@@ -61,5 +68,7 @@ private:
     int m_contourCnt;//轮廓线的个数
 
     QTimer m_timer;
+
+    std::shared_ptr<CirQueue<float>> showDataQueSp;
 };
 #endif // PLOT_H
